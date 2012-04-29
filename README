@@ -1,0 +1,14 @@
+- What is serload?
+serload is a utility to download a new image to the SIMpad using the serial 
+interface. The image will be burnt to the FLASH. You can update the firmware 
+(PBL), the bootloader, or the operating system.
+
+- How to install serload?
+$ su
+$ make install
+serload and its man page will be installed.
+$ exit
+
+- How to use serload?
+See "man serload" and "serload --help"!
+
