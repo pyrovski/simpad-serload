@@ -148,8 +148,9 @@ bool SerialDownload::changeBaudRate(const int newBaudRate,
         baudRate = B460800;
         break;
     default:
-        return 0;
-        break;
+      fprintf(stderr, "invalid baud rate: %d\n", newBaudRate);
+      return 0;
+      break;
     }
 
     success = tcgetattr(_serialPort, &setup);
