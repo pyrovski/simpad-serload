@@ -9,6 +9,9 @@
 //
 // NOTES:        -
 //
+// Updated:      Peter Bailey (peter.eldridge.bailey@gmail.com)
+// Date:         April 2012
+//
 //=============================================================================
 
 #include <unistd.h>
@@ -23,21 +26,21 @@ const int STRING_LENGTH = 128;
 //=============================================================================
 void printHelp(void)
 {
-    cout << "serload V1.0 for Linux " << endl;
+    cout << "serload V1.1 for Linux " << endl;
     cout << "Downloading a new image to the SIMpad " 
          << "using the serial interface." << endl << endl;
-    cout << "Invocation: serload [IMAGEFILE] [ttyS-PORT] [slowbaud]" << endl;
+    cout << "Invocation: serload [IMAGEFILE] -p [ttyS-PORT] -b [baud]" << endl;
     cout << "IMAGEFILE: the file with the new image prepared for the"
          << " SIMpad Bootloader." 
          << endl;
-    cout << "ttyS-PORT: number of the ttyS-Port for the download." 
+    cout << "ttyS-PORT: device file of the ttyS-Port for the download." 
          << endl;
-    cout << "Note: ttyS0 = COM1, ttyS1 = COM2, ..." << endl;
-    cout << "For download with 38400 baud give parameter slowbaud"
+    cout << "Note: /dev/ttyS0 = COM1, /dev/ttyS1 = COM2, ..." << endl;
+    cout << "For download with 38400 baud give parameter -b 38400"
          << endl;
     cout << "Example: download file: gpe_26.img over COM1 = ttyS[0] with slowbaud (38400)"
          << endl;
-    cout << "         serload gpe_26.img 0 slowbaud"
+    cout << "         ./serload gpe_26.img -p /dev/ttyS0 -b 38400"
          << endl << endl;
 }
 
@@ -45,72 +48,35 @@ void printHelp(void)
 //=============================================================================
 int main(int argc, char *argv[])
 {
-    int i;
-    for(i = 0; i < argc; ++i)
-    {
-        if(strcmp(argv[i], "--help") == 0)
-        {
-	    // The user asks for help.
-	    printHelp(); 
-            exit(0);
-	}
-    }
 
-    if(argc !=4 && argc != 3 && argc != 2)
-    {
-        cerr << endl << "Usage: serload [IMAGEFILE] [ttyS-PORT] [slowbaud]" << endl;
-        cerr << "See also \"serload --help\"!" << endl << endl;
-        exit(1);
+  int status;
+  const char optstring[] = "hp:b:";
+
+  int newBaud = 115200;
+  char device[STRING_LENGTH] = "/dev/ttyS0";
+  
+
+  while((status = getopt(argc, argv, optstring)) != -1){
+    switch(status){
+    case 'h':
+      printHelp();
+      exit(0);
+    case 'p':
+      strncpy(device, optarg, STRING_LENGTH);
+      device[STRING_LENGTH - 1] = 0;
+      break;
+    case 'b':
+      newBaud = strtoul(optarg, 0, 0);
+      break;
     }
-    
-    int newBaud;
-    newBaud = 115200;
-    char device[STRING_LENGTH];
-    char test[STRING_LENGTH];
+  }
+
+  if(optind >= argc){
+    fprintf(stderr, "Expected input file\n");
+    printHelp();
+    exit(1);
+  }
         
-    cout << "argc=" << argc << endl;
-
-    if(argc == 4)
-    {
-        strcpy(test, argv[3]);
-        if(test == "slowbaud")
-	{
-	    newBaud = 38400;
-            strcpy(device, "/dev/ttyS");
-            strcat(device, argv[2]);	    
-	}
-	else
-	{
-            cerr << endl << "Usage: serload [IMAGEFILE] [ttyS-PORT] [slowbaud]" << endl;
-            cerr << "See also \"serload --help\"!" << endl << endl;
-            exit(1);	
-	}
-    }
-
-    if(argc == 3)
-    {
-        cout << "argv[0]=" << argv[0] << endl; 
-        cout << "argv[1]=" << argv[1] << endl; 
-        cout << "argv[2]=" << argv[2] << endl; 
-        if(argv[2] == test)
-	{
-            cout << "argv[2]=" << argv[2] << endl; 
-	    newBaud = 38400;
-            // No serial port is given, use ttyS0 as default.
-            strcpy(device, "/dev/ttyS0");
-	}
-	else
-	{
-            strcpy(device, "/dev/ttyS");
-            strcat(device, argv[2]);
-	}
-    }	        
-    else
-    {
-        // If no serial port is given, use ttyS0 as default.
-        strcpy(device, "/dev/ttyS0");
-    }
-
     SerialDownload serload;
     int myError, imagesize;
     static char *image;
@@ -132,7 +98,6 @@ int main(int argc, char *argv[])
     }
 
     cout << "Please press RESET at the back of the SIMpad!" << endl << endl;
-    // int reply = serload.connectToSimpad(115200, myError);
 
     cout << "Using Baudrate=" << newBaud << " for download" << endl;
     cout << endl << "Try to connect to Simpad over " << device << " ..." << endl;
@@ -159,17 +124,6 @@ int main(int argc, char *argv[])
     // Send blocks.
     while(numberOfBlocksToSend)
     {
-/*
-        if(count < 64)
-        {
-            cout << "#";
-        }
-        else
-        {
-            cout << "   " << progress << " %" << endl;
-            count = 0;
-        }
-*/
         serload.sendBlock(image, 512, myError);
         image += 512;
         --numberOfBlocksToSend;
